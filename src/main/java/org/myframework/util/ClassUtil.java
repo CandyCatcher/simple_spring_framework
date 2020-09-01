@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.File;
 import java.io.FileFilter;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.util.HashSet;
@@ -148,5 +149,23 @@ public class ClassUtil {
      */
     public static ClassLoader getClassLoader() {
        return Thread.currentThread().getContextClassLoader();
+    }
+
+    /**
+     * 设置类的属性值
+     * @param filed 成员变量
+     * @param target 类
+     * @param value 成员变量的值
+     * @param accessible 是否允许设置私有属性
+     */
+    public static void setFiled(Field filed, Object target, Object value, Boolean accessible ) {
+        //决定是否支持反射操作私有的成员变量
+        filed.setAccessible(accessible);
+        try {
+            filed.set(target,value);
+        } catch (IllegalAccessException e) {
+            log.error("setField error", e);
+            throw new RuntimeException(e);
+        }
     }
 }

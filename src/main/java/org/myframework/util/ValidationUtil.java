@@ -30,4 +30,13 @@ public class ValidationUtil {
     public static boolean isEmpty(Object[] objects) {
         return objects == null || objects.length == 0;
     }
+
+    /**
+     * 判断项目中String是否为null或者""
+     * @param object 字符串
+     * @return 字符串是否为空
+     */
+    public static boolean isEmpty(String object) {
+        return object == null || "".equals(object);
+    }
 }
