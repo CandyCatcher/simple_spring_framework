@@ -17,33 +17,38 @@ public class ClassUtil {
     public static final String FILE_PROTOCOL = "file";
 
     /**
-     * 获取包下类的集合
+     * 根据传入的包名，获取该包下类的集合
      *
      * 1.获取到类的加载器
+     *      要使用类加载器，是为了解决实际路径的问题，如果只是根据包名，比如top.candy是不能直接定位到实际的文件夹路径的
      *      通过用户传入的信息，获取项目发布的实际路径
      * 2.通过类加载器获取到加载的资源信息
      * 3.依据不同的资源类型，采用不同的方式获取资源的集合
      *
      * @param packageName 包名
-     * @return 返回classSet
+     * @return 返回存储class类型的Set
      */
+
     public static Set<Class<?>> extractPackageClass(String packageName) {
-        //1.获取类的加载器
+        // 1.获取类的加载器
         ClassLoader classLoader = getClassLoader();
-        //2.通过类加载器获取到加载的资源
+        // 2.通过类加载器获取到加载的资源URL
+        // getResource需要的名称是反斜杠'/'隔开的名称
         URL url = classLoader.getResource(packageName.replace(".", "/"));
         if (url == null) {
+            // log4j记录信息
             log.warn("unable to retrieve anything from package:" + packageName);
             return null;
         }
-        //3.依据不同的资源类型，采用不同的方式获取资源的集合
+        // 3.依据不同的资源类型，采用不同的方式获取资源的集合
         Set<Class<?>> classSet = null;
-        //过滤出文件类型资源协议是不是file
+        // 通过getprotocol过滤出文件类型资源协议是不是file，也可能是jar、war等
         if (url.getProtocol().equalsIgnoreCase(FILE_PROTOCOL)) {
             classSet = new HashSet<Class<?>>();
-            //获取到package所在的实际路径
+            // 获取到package所在的实际路径
+            // getPath用来获取url实例的路径，该路径是绝对路径
             File packageDirectory = new File(url.getPath());
-            //去page所在的实际路径下面提取class文件，结合用户传入的packageName，生成class对象实例，然后将实例放到classSet中
+            // 去page所在的实际路径下面提取class文件，结合用户传入的packageName，生成class对象实例，然后将实例放到classSet中
             extractClassFile(classSet, packageDirectory, packageName);
         }
 
@@ -54,16 +59,18 @@ public class ClassUtil {
     }
 
     /**
-     * 递归获取目标package里面的所有calss文件（包括子package里的class文件）
+     * 递归获取目标package里面的所有class文件（包括子package里的class文件）
      * @param classSet 装载目标类的集合
      * @param packageDirectory 文件或目录
      * @param packageName 包名
      */
     private static void extractClassFile(Set<Class<?>> classSet, File packageDirectory, String packageName) {
-        //如果当前的是一个目录，就继续，如果是一个文件就结束
+        // 这里是中断判断
+        // 如果当前的是一个目录，就继续，如果是一个文件就结束
         if (!packageDirectory.isDirectory()) {
             return ;
         }
+
         //如果是一个文件夹，则调用其listFiles方法获取文件夹下的文件或文件夹
         //同时，listFiles方法可以过滤出我们感兴趣的实例
         File[] files = packageDirectory.listFiles(new FileFilter() {
@@ -81,28 +88,34 @@ public class ClassUtil {
                         addToClassSet(fileAbsolutePath);
                     }
                 }
-                //对于文件直接过滤掉即可了
+                // 文件处理完之后，不需要保存，直接过滤掉即可了
+                // 这里就是非目录文件直接过滤掉
                 return false;
             }
 
             //根据class文件的绝对路径名，获取并生成class对象，并放在classSet中
             private void addToClassSet(String fileAbsolutePath) {
                 //1.从class文件的绝对值路径中提取出包含package的类名
-                //比如/home/candyboy/IdeaProjects/my_springframework/src/main/java/top/candysky/entity/dto/MainPageInfoDTO.class
-                //需要修改成top.candysky.entity.dto.MainPageInfoDTO
+                //比如实际的路径是：
+                // /home/candyboy/IdeaProjects/my_springframework/src/main/java/top/candysky/entity/dto/MainPageInfoDTO.class
+                //需要转变为：
+                // top.candysky.entity.dto.MainPageInfoDTO
+
                 //File.separator可根据不同的操作系统判断是‘/’还是‘\’
                 fileAbsolutePath = fileAbsolutePath.replace(File.separator, ".");
                 String className = fileAbsolutePath.substring(fileAbsolutePath.indexOf(packageName));
+                // 从头开始，截止到class前的那一个'.'
                 className = className.substring(0, className.lastIndexOf("."));
                 //2.通过反射机制获取对应的class对象并加入到classSet中
-                Class targetClass = loadClass(className);
+                Class<?> targetClass = loadClass(className);
                 classSet.add(targetClass);
             }
         });
 
-        //foreach要做null指针异常判断
+        // 这里是递归操作
+        // foreach要做null指针异常判断
         if (files != null) {
-            //如果过滤后的文件夹中还有文件夹的话，进行递归判断
+            // 如果过滤后的文件夹中还有文件夹的话，进行递归判断
             for (File f : files) {
                 extractClassFile(classSet, f, packageName);
             }
@@ -143,9 +156,8 @@ public class ClassUtil {
     }
 
     /**
-     * 获取classLoader
-     *
-     * @return
+     * 获取classLoader 的实例,通过线程实例获取到classLoader
+     * @return 当前classLoader
      */
     public static ClassLoader getClassLoader() {
        return Thread.currentThread().getContextClassLoader();

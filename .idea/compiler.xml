@@ -8,6 +8,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="my_springframework" />
+        <module name="simple_spring_framework" />
       </profile>
     </annotationProcessing>
   </component>
