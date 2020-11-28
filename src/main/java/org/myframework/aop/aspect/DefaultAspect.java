@@ -2,6 +2,9 @@ package org.myframework.aop.aspect;
 
 import java.lang.reflect.Method;
 
+/*
+所有的切面都必须要继承这个类
+ */
 public abstract class DefaultAspect {
 
     /**

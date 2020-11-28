@@ -6,12 +6,13 @@ import org.myframework.aop.aspect.AspectInfo;
 import org.myframework.util.ValidationUtil;
 
 import java.lang.reflect.Method;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 /**
+ * 针对每个被代理的对象进行方法的拦截，每个对象可能有多个Aspect
  * 往被代理的类中添加横切逻辑
  */
 public class AspectListExecutor implements MethodInterceptor {
@@ -51,6 +52,8 @@ public class AspectListExecutor implements MethodInterceptor {
     @Override
     public Object intercept(Object o, Method method, Object[] objects, MethodProxy methodProxy) throws Throwable {
         Object returnValue = null;
+        // 这里对sortedAspectInfoList进行精筛
+        collectAccurateMatchedAspectList(method);
         if (ValidationUtil.isEmpty(sortedAspectInfoList)) {
             return null;
         }
@@ -68,6 +71,31 @@ public class AspectListExecutor implements MethodInterceptor {
             invokeAfterThrowingAdvices(method, objects, e);
         }
         return returnValue;
+    }
+
+    /**
+     * 传入被代理方法的实例进行精筛，被代理方法实例是否真的匹配expression表达式。如果匹配就保留，否则就删除
+     */
+    private void collectAccurateMatchedAspectList(Method method) {
+        if (ValidationUtil.isEmpty(sortedAspectInfoList)) {
+            return;
+        }
+        /*
+         在遍历过程中可能需要删除元素，如果还是使用foreach方法进行遍历，当移除sortedAspectInfoList中的元素时，会报出
+         java.util.ConcurrentModificationException的异常，这是因为foreach中用到的iterator是工作在一个独立的线程中的，
+         并且有一个mutex锁，iterator在被创建之后，会建立一个指向原来对象的单链索引表，当原来的对象的数量发生变化时，索引表的内容不会发生变化，
+         当索引指针向后寻找的时候就找不到要迭代的对象了。接下来会按照一个fail-fast的原则，使得iterator马上抛出异常
+
+         但是可以使用iterator本身的remove方法删除对象，因为当remove时，会维护前面说的索引表，所以使用迭代器的方式进行遍历
+         */
+        sortedAspectInfoList.removeIf(aspectInfo -> !aspectInfo.getPointcutLocator().accurateMatches(method));
+        //Iterator<AspectInfo> it = sortedAspectInfoList.iterator();
+        //while (it.hasNext()){
+        //    AspectInfo aspectInfo = it.next();
+        //    if(!aspectInfo.getPointcutLocator().accurateMatches(method)){
+        //        it.remove();
+        //    }
+        //}
     }
 
     private void invokeAfterThrowingAdvices(Method method, Object[] args, Exception e) throws Throwable {

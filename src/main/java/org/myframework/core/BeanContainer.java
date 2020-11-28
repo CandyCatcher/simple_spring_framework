@@ -3,6 +3,7 @@ package org.myframework.core;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.myframework.aop.annotation.Aspect;
 import org.myframework.core.annotation.Component;
 import org.myframework.core.annotation.Controller;
 import org.myframework.core.annotation.Repository;
@@ -56,7 +57,7 @@ public class BeanContainer {
      * 这里使用一个list用来存储注解
      */
     private static final List<Class<? extends Annotation>> BEAN_ANNOTATION = Arrays.asList(Component.class, Controller.class,
-            Repository.class, Service.class);
+            Repository.class, Service.class, Aspect.class);
 
     /**
      * 使用枚举创建单例
